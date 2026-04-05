@@ -1,0 +1,45 @@
+Путь	Назначение
+face_match/config.py
+Камера, FPS, пути, порог звука, интервал логов
+face_match/detector.py
+MediaPipe Face Detection, несколько лиц, сортировка по площади
+face_match/emotion.py
+ONNX FER+ (emotion-ferplus-8.onnx), 8→7 эмоций, при первом запуске модель скачивается в models/ (~34 МБ). Без TensorFlow — совместимо с Python 3.14
+face_match/dataset.py
+Список файлов, кеш data/cache/embeddings.pkl по сигнатуре файла
+face_match/matcher.py
+Косинусное сходство векторов эмоций
+face_match/index_dataset.py
+Индексация: MediaPipe → кроп → ONNX; если лица нет — Haar/OpenCV или весь кадр; опционально ручные метки в data/metadata.json
+face_match/emotion_logger.py
+Лог в logs/emotions.log
+face_match/app.py
+Цикл камеры, ограничение частоты распознавания (MIN_PROCESS_INTERVAL_MS), уменьшение кадра для ONNX, плавная смена превью, звук winsound при сильном совпадении и смене картинки, Q / S
+data/images/
+Ваши мемы / картинки
+data/metadata.json
+"labels": { "file.jpg": "happy" } — метки из набора angry, disgust, fear, happy, neutral, sad, surprise
+Почему не FER (TensorFlow): для вашего окружения нет колёс TensorFlow под Python 3.14; вместо этого используется та же семантика 7 эмоций через ONNX FER+.
+
+
+Запуск
+cd c:\Users\nothingness\Desktop\cv
+.venv\Scripts\pip install -r requirements.txt
+Положите изображения в data/images/, затем:
+
+.venv\Scripts\python -m face_match.index_dataset
+При необходимости полный пересчёт кеша:
+
+.venv\Scripts\python -m face_match.index_dataset --rebuild
+Приложение:
+
+.venv\Scripts\python -m face_match
+Опции: --camera 0, --no-sound, --log-interval 1.0.
+
+Соответствие требованиям
+Видео: OpenCV, целевой ~24 FPS с ограничителем сна; тяжёлый ONNX вызывается не на каждый кадр (чтобы держать 15–20+ кадров/с отрисовки).
+Лица: MediaPipe, рамки у всех лиц, совпадение по самому крупному.
+Эмоции: ONNX FER+, вектор из 7 вероятностей → embedding для матчинга.
+Датасет: кеш векторов; новые файлы — добавить в data/images/ и снова запустить index_dataset (или --rebuild при смене меток/файлов).
+UI: одно окно OpenCV: камера слева, совпадение справа; плавное смешивание при смене; лог эмоции в файл.
+Звук: короткий системный звук при смене совпадения и cosine ≥ threshold (см. config.SIMILARITY_THRESHOLD_SOUND).
